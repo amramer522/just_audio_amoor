@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:just_audio_platform_interface/just_audio_platform_interface.dart';
 import 'package:rxdart/rxdart.dart';
+import 'package:base_project/screens/qur2an/surah_details.dart';
 
 export 'package:audio_service/audio_service.dart' show MediaItem;
 
@@ -55,12 +56,12 @@ class JustAudioBackground {
       androidNotificationChannelId: androidNotificationChannelId,
       androidNotificationChannelName: androidNotificationChannelName,
       androidNotificationChannelDescription:
-          androidNotificationChannelDescription,
+      androidNotificationChannelDescription,
       notificationColor: notificationColor,
       androidNotificationIcon: androidNotificationIcon,
       androidShowNotificationBadge: androidShowNotificationBadge,
       androidNotificationClickStartsActivity:
-          androidNotificationClickStartsActivity,
+      androidNotificationClickStartsActivity,
       androidNotificationOngoing: androidNotificationOngoing,
       androidStopForegroundOnPause: androidStopForegroundOnPause,
       artDownscaleWidth: artDownscaleWidth,
@@ -101,12 +102,12 @@ class _JustAudioBackgroundPlugin extends JustAudioPlatform {
         androidNotificationChannelId: androidNotificationChannelId,
         androidNotificationChannelName: androidNotificationChannelName,
         androidNotificationChannelDescription:
-            androidNotificationChannelDescription,
+        androidNotificationChannelDescription,
         notificationColor: notificationColor,
         androidNotificationIcon: androidNotificationIcon,
         androidShowNotificationBadge: androidShowNotificationBadge,
         androidNotificationClickStartsActivity:
-            androidNotificationClickStartsActivity,
+        androidNotificationClickStartsActivity,
         androidNotificationOngoing: androidNotificationOngoing,
         androidStopForegroundOnPause: androidStopForegroundOnPause,
         artDownscaleWidth: artDownscaleWidth,
@@ -129,10 +130,10 @@ class _JustAudioBackgroundPlugin extends JustAudioPlatform {
       throw PlatformException(
           code: "error",
           message:
-              "just_audio_background supports only a single player instance");
+          "just_audio_background supports only a single player instance");
     }
     _player = _JustAudioPlayer(
-      initRequest: request,
+      id: request.id,
     );
     return _player!;
   }
@@ -157,7 +158,6 @@ class _JustAudioBackgroundPlugin extends JustAudioPlatform {
 }
 
 class _JustAudioPlayer extends AudioPlayerPlatform {
-  final InitRequest initRequest;
   final eventController = StreamController<PlaybackEventMessage>.broadcast();
   final playerDataController = StreamController<PlayerDataMessage>.broadcast();
   bool? _playing;
@@ -165,8 +165,8 @@ class _JustAudioPlayer extends AudioPlayerPlatform {
   int? _androidAudioSessionId;
   late final _PlayerAudioHandler _playerAudioHandler;
 
-  _JustAudioPlayer({required this.initRequest}) : super(initRequest.id) {
-    _playerAudioHandler = _PlayerAudioHandler(initRequest);
+  _JustAudioPlayer({required String id}) : super(id) {
+    _playerAudioHandler = _PlayerAudioHandler(id);
     _audioHandler.inner = _playerAudioHandler;
     _audioHandler.playbackState.listen((playbackState) {
       broadcastPlaybackEvent();
@@ -275,7 +275,7 @@ class _JustAudioPlayer extends AudioPlayerPlatform {
 
   @override
   Future<SetShuffleOrderResponse> setShuffleOrder(
-          SetShuffleOrderRequest request) =>
+      SetShuffleOrderRequest request) =>
       _playerAudioHandler.customSetShuffleOrder(request);
 
   @override
@@ -284,30 +284,30 @@ class _JustAudioPlayer extends AudioPlayerPlatform {
 
   @override
   Future<ConcatenatingInsertAllResponse> concatenatingInsertAll(
-          ConcatenatingInsertAllRequest request) =>
+      ConcatenatingInsertAllRequest request) =>
       _playerAudioHandler.customConcatenatingInsertAll(request);
 
   @override
   Future<ConcatenatingRemoveRangeResponse> concatenatingRemoveRange(
-          ConcatenatingRemoveRangeRequest request) =>
+      ConcatenatingRemoveRangeRequest request) =>
       _playerAudioHandler.customConcatenatingRemoveRange(request);
 
   @override
   Future<ConcatenatingMoveResponse> concatenatingMove(
-          ConcatenatingMoveRequest request) =>
+      ConcatenatingMoveRequest request) =>
       _playerAudioHandler.customConcatenatingMove(request);
 
   @override
   Future<SetAndroidAudioAttributesResponse> setAndroidAudioAttributes(
-          SetAndroidAudioAttributesRequest request) =>
+      SetAndroidAudioAttributesRequest request) =>
       _playerAudioHandler.customSetAndroidAudioAttributes(request);
 
   @override
   Future<SetAutomaticallyWaitsToMinimizeStallingResponse>
-      setAutomaticallyWaitsToMinimizeStalling(
-              SetAutomaticallyWaitsToMinimizeStallingRequest request) =>
-          _playerAudioHandler
-              .customSetAutomaticallyWaitsToMinimizeStalling(request);
+  setAutomaticallyWaitsToMinimizeStalling(
+      SetAutomaticallyWaitsToMinimizeStallingRequest request) =>
+      _playerAudioHandler
+          .customSetAutomaticallyWaitsToMinimizeStalling(request);
 }
 
 class _PlayerAudioHandler extends BaseAudioHandler
@@ -337,20 +337,20 @@ class _PlayerAudioHandler extends BaseAudioHandler
   Future<AudioPlayerPlatform> get _player => _playerCompleter.future;
   int? get index => _justAudioEvent.currentIndex;
   MediaItem? get currentMediaItem => index != null &&
-          currentQueue != null &&
-          index! >= 0 &&
-          index! < currentQueue!.length
+      currentQueue != null &&
+      index! >= 0 &&
+      index! < currentQueue!.length
       ? currentQueue![index!]
       : null;
 
   List<MediaItem>? get currentQueue => queue.nvalue;
 
-  _PlayerAudioHandler(InitRequest initRequest) {
-    _init(initRequest);
+  _PlayerAudioHandler(String playerId) {
+    _init(playerId);
   }
 
-  Future<void> _init(InitRequest initRequest) async {
-    final player = await _platform.init(initRequest);
+  Future<void> _init(String playerId) async {
+    final player = await _platform.init(InitRequest(id: playerId));
     _playerCompleter.complete(player);
     final playbackEventMessageStream = player.playbackEventMessageStream;
     playbackEventMessageStream.listen((event) {
@@ -380,28 +380,28 @@ class _PlayerAudioHandler extends BaseAudioHandler
         .distinct()
         .debounceTime(const Duration(milliseconds: 100))
         .map((track) {
-          // Platform may send us a null duration on dispose, which we should
-          // ignore.
-          final currentMediaItem = this.currentMediaItem;
-          if (currentMediaItem != null) {
-            if (track.duration == null && currentMediaItem.duration != null) {
-              return TrackInfo(track.index, currentMediaItem.duration);
-            }
-          }
-          return track;
-        })
+      // Platform may send us a null duration on dispose, which we should
+      // ignore.
+      final currentMediaItem = this.currentMediaItem;
+      if (currentMediaItem != null) {
+        if (track.duration == null && currentMediaItem.duration != null) {
+          return TrackInfo(track.index, currentMediaItem.duration);
+        }
+      }
+      return track;
+    })
         .distinct()
         .listen((track) {
-          if (currentMediaItem != null) {
-            if (track.duration != currentMediaItem!.duration &&
-                (index! < queue.nvalue!.length && track.duration != null)) {
-              currentQueue![index!] =
-                  currentQueue![index!].copyWith(duration: track.duration);
-              queue.add(currentQueue!);
-            }
-            mediaItem.add(currentMediaItem!);
-          }
-        });
+      if (currentMediaItem != null) {
+        if (track.duration != currentMediaItem!.duration &&
+            (index! < queue.nvalue!.length && track.duration != null)) {
+          currentQueue![index!] =
+              currentQueue![index!].copyWith(duration: track.duration);
+          queue.add(currentQueue!);
+        }
+        mediaItem.add(currentMediaItem!);
+      }
+    });
   }
 
   @override
@@ -475,14 +475,14 @@ class _PlayerAudioHandler extends BaseAudioHandler
   }
 
   Future<SetAndroidAudioAttributesResponse> customSetAndroidAudioAttributes(
-          SetAndroidAudioAttributesRequest request) async =>
+      SetAndroidAudioAttributesRequest request) async =>
       await (await _player).setAndroidAudioAttributes(request);
 
   Future<SetAutomaticallyWaitsToMinimizeStallingResponse>
-      customSetAutomaticallyWaitsToMinimizeStalling(
-              SetAutomaticallyWaitsToMinimizeStallingRequest request) async =>
-          await (await _player)
-              .setAutomaticallyWaitsToMinimizeStalling(request);
+  customSetAutomaticallyWaitsToMinimizeStalling(
+      SetAutomaticallyWaitsToMinimizeStallingRequest request) async =>
+      await (await _player)
+          .setAutomaticallyWaitsToMinimizeStalling(request);
 
   void _updateQueue() {
     queue.add(sequence.map((source) => source.tag as MediaItem).toList());
@@ -536,16 +536,19 @@ class _PlayerAudioHandler extends BaseAudioHandler
 
   @override
   Future<void> skipToNext() async {
-    if (hasNext) {
-      await skipToQueueItem(nextIndex);
-    }
+    // if (hasNext) {
+    //   await skipToQueueItem(nextIndex);
+    // }
+    surahIndexStreamRange.add((surahIndex) + 1);
   }
+
 
   @override
   Future<void> skipToPrevious() async {
-    if (hasPrevious) {
-      await skipToQueueItem(previousIndex);
-    }
+    // if (hasPrevious) {
+    //   await skipToQueueItem(previousIndex);
+    // }
+    surahIndexStreamRange.add((surahIndex) - 1);
   }
 
   @override
@@ -610,7 +613,7 @@ class _PlayerAudioHandler extends BaseAudioHandler
     _broadcastStateIfActive();
     (await _player).setShuffleMode(SetShuffleModeRequest(
         shuffleMode: ShuffleModeMessage.values[
-            min(ShuffleModeMessage.values.length - 1, shuffleMode.index)]));
+        min(ShuffleModeMessage.values.length - 1, shuffleMode.index)]));
   }
 
   @override
@@ -636,9 +639,9 @@ class _PlayerAudioHandler extends BaseAudioHandler
         _justAudioEvent.processingState == ProcessingStateMessage.ready) {
       return Duration(
           milliseconds: (_justAudioEvent.updatePosition.inMilliseconds +
-                  ((DateTime.now().millisecondsSinceEpoch -
-                          _justAudioEvent.updateTime.millisecondsSinceEpoch) *
-                      _speed))
+              ((DateTime.now().millisecondsSinceEpoch -
+                  _justAudioEvent.updateTime.millisecondsSinceEpoch) *
+                  _speed))
               .toInt());
     } else {
       return _justAudioEvent.updatePosition;
@@ -678,10 +681,11 @@ class _PlayerAudioHandler extends BaseAudioHandler
   /// Broadcasts the current state to all clients.
   void _broadcastState() {
     final controls = [
-      if (hasPrevious) MediaControl.skipToPrevious,
+      if (surahIndex>0) MediaControl.skipToPrevious,
       if (_playing) MediaControl.pause else MediaControl.play,
       MediaControl.stop,
-      if (hasNext) MediaControl.skipToNext,
+      if (surahIndex<113) MediaControl.skipToNext,
+      // MediaControl.fastForward
     ];
     playbackState.add(playbackState.nvalue!.copyWith(
       controls: controls,
@@ -717,11 +721,11 @@ class _Seeker {
   bool _running = false;
 
   _Seeker(
-    this.handler,
-    this.positionInterval,
-    this.stepInterval,
-    this.duration,
-  );
+      this.handler,
+      this.positionInterval,
+      this.stepInterval,
+      this.duration,
+      );
 
   Future<void> start() async {
     _running = true;
@@ -759,7 +763,7 @@ extension _PlaybackEventMessageExtension on PlaybackEventMessage {
         icyMetadata: icyMetadata ?? this.icyMetadata,
         currentIndex: currentIndex ?? this.currentIndex,
         androidAudioSessionId:
-            androidAudioSessionId ?? this.androidAudioSessionId,
+        androidAudioSessionId ?? this.androidAudioSessionId,
       );
 }
 
@@ -798,7 +802,7 @@ extension AudioSourceExtension on AudioSourceMessage {
       final childIndicesList = <List<int>>[];
       for (final child in self.children) {
         final childIndices =
-            child.shuffleIndices.map((i) => i + offset).toList();
+        child.shuffleIndices.map((i) => i + offset).toList();
         childIndicesList.add(childIndices);
         offset += childIndices.length;
       }
