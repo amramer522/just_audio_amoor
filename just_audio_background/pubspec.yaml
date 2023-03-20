@@ -1,5 +1,6 @@
 name: just_audio_background
 homepage: https://github.com/ryanheise/just_audio/tree/master/just_audio_background
+description: amoor
 version: 0.0.1-beta.10
 
 dependencies:
