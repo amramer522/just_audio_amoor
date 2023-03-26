@@ -539,7 +539,7 @@ class _PlayerAudioHandler extends BaseAudioHandler
     // if (hasNext) {
     //   await skipToQueueItem(nextIndex);
     // }
-    surahIndexStreamRange.add((surahIndex??0) + 1);
+    surahIndexStreamRange.add(surahIndex + 1);
   }
 
 
@@ -548,7 +548,7 @@ class _PlayerAudioHandler extends BaseAudioHandler
     // if (hasPrevious) {
     //   await skipToQueueItem(previousIndex);
     // }
-    surahIndexStreamRange.add((surahIndex??0) - 1);
+    surahIndexStreamRange.add(surahIndex - 1);
   }
 
   @override
@@ -681,10 +681,10 @@ class _PlayerAudioHandler extends BaseAudioHandler
   /// Broadcasts the current state to all clients.
   void _broadcastState() {
     final controls = [
-      if (surahIndex??0>0) MediaControl.skipToPrevious,
+      if (surahIndex>0) MediaControl.skipToPrevious,
       if (_playing) MediaControl.pause else MediaControl.play,
       MediaControl.stop,
-      if (surahIndex??0<113) MediaControl.skipToNext,
+      if (surahIndex<113) MediaControl.skipToNext,
       // MediaControl.fastForward
     ];
     playbackState.add(playbackState.nvalue!.copyWith(
